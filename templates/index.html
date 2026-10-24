@@ -1,0 +1,2661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScholarPulse — Autonomous ArXiv Research Agent &amp; 3D Knowledge World</title>
+  <style>
+    :root {
+      /* Apple Dark Mode Elevated Surface Hierarchy (dark-mode.md) */
+      --bg-canvas: #0b0f17;
+      --bg-surface: #131b2e;
+      --bg-elevated: #1a243b;
+      --bg-elevated-hover: #22304d;
+      --bg-glass: rgba(19, 27, 46, 0.82);
+
+      /* Borders & Dividers */
+      --border-subtle: rgba(148, 163, 184, 0.16);
+      --border-strong: rgba(148, 163, 184, 0.28);
+
+      /* High-Contrast Text Hierarchy (accessibility.md >= 4.5:1 / 7:1) */
+      --text-primary: #f8fafc;     /* 18.2:1 on canvas */
+      --text-secondary: #cbd5e1;   /* 11.8:1 on surface */
+      --text-muted: #94a3b8;       /* 6.1:1 on surface */
+
+      /* Strict Semantic Accent Colors (color.md - single meaning per color) */
+      --accent-interactive: #38bdf8;       /* Interactive controls, links, focus */
+      --accent-interactive-bg: rgba(56, 189, 248, 0.14);
+      --accent-interactive-border: rgba(56, 189, 248, 0.42);
+
+      --status-verified: #34d399;          /* Verified ArXiv grounding & live status */
+      --status-verified-bg: rgba(52, 211, 153, 0.12);
+      --status-verified-border: rgba(52, 211, 153, 0.38);
+
+      --galaxy-accent: #a78bfa;            /* 3D Knowledge World accent */
+      --galaxy-accent-bg: rgba(167, 139, 250, 0.14);
+      --galaxy-accent-border: rgba(167, 139, 250, 0.42);
+
+      --warning-amber: #fbbf24;            /* Open limitations & cross-domain bridges */
+
+      /* 5-Step Typographic Scale (typography.md - 12.8px floor) */
+      --text-xs: 0.8rem;      /* 12.8px - Badges & metadata floor */
+      --text-sm: 0.875rem;    /* 14px   - Secondary UI & controls */
+      --text-base: 0.968rem;  /* 15.5px - Comfortable body reading */
+      --text-lg: 1.15rem;     /* 18.4px - Card & section titles */
+      --text-xl: 1.45rem;     /* 23.2px - Summary metrics */
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-size: var(--text-base);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Keyboard Accessibility Focus Ring (accessibility.md) */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    summary:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid var(--accent-interactive);
+      outline-offset: 2px;
+    }
+
+    /* =========================================================================
+       1. SLIM STICKY MACOS TOOLBAR (designing-for-macos.md / layout.md)
+       ========================================================================= */
+    .top-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 10px 28px;
+    }
+
+    .toolbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--status-verified-bg);
+      color: var(--status-verified);
+      border: 1px solid var(--status-verified-border);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.2); }
+    }
+
+    /* Segmented View Switcher in Toolbar Center */
+    .segmented-nav {
+      display: inline-flex;
+      background: rgba(11, 15, 23, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .seg-btn {
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 7px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .seg-btn.active {
+      background: var(--bg-elevated);
+      color: var(--accent-interactive);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    }
+
+    .seg-count {
+      font-size: 0.76rem;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .seg-btn.active .seg-count {
+      background: var(--accent-interactive-bg);
+      color: var(--accent-interactive);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Standard Controls (accessibility.md >= 36px height) */
+    .btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      min-height: 36px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--bg-elevated-hover);
+      border-color: var(--text-muted);
+    }
+
+    .btn-primary {
+      background: var(--accent-interactive-bg);
+      border-color: var(--accent-interactive-border);
+      color: #7dd3fc;
+    }
+
+    .btn-primary:hover {
+      background: rgba(56, 189, 248, 0.24);
+      border-color: var(--accent-interactive);
+      color: #e0f2fe;
+    }
+
+    .btn-galaxy {
+      background: var(--galaxy-accent-bg);
+      border-color: var(--galaxy-accent-border);
+      color: #ddd6fe;
+    }
+
+    .btn-galaxy:hover {
+      background: rgba(167, 139, 250, 0.24);
+      border-color: var(--galaxy-accent);
+      color: #f5f3ff;
+    }
+
+    /* =========================================================================
+       2. PAGE CONTAINER & AGENT RESEARCH FOCUS CONTROLLER
+       ========================================================================= */
+    .page-shell {
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 28px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .mission-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mission-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .mission-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .section-eyebrow {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .mission-heading {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .active-focus-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-sm);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--text-secondary);
+    }
+
+    .active-focus-badge strong {
+      color: var(--text-primary);
+    }
+
+    .theme-form-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .text-input {
+      flex: 1;
+      min-width: 260px;
+      min-height: 40px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: var(--text-base);
+      transition: border-color 0.15s ease;
+    }
+
+    .text-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .text-input:focus {
+      border-color: var(--accent-interactive);
+      outline: none;
+    }
+
+    .pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pills-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .pill-btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: var(--text-xs);
+      font-weight: 500;
+      min-height: 30px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .pill-btn:hover,
+    .pill-btn.active {
+      background: var(--accent-interactive-bg);
+      border-color: var(--accent-interactive);
+      color: var(--text-primary);
+    }
+
+    /* 4-Card Summary Strip */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    @media (max-width: 980px) {
+      .summary-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat-card {
+      background: rgba(11, 15, 23, 0.55);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stat-label {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-caption {
+      font-size: var(--text-xs);
+      color: var(--text-secondary);
+    }
+
+    /* =========================================================================
+       3. WORKSPACE SPLIT VIEW (TAB 1: PAPER LIBRARY)
+       ========================================================================= */
+    .workspace {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      position: sticky;
+      top: 78px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-title {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .sidebar-reset-btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--accent-interactive);
+      background: transparent;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .sidebar-reset-btn:hover {
+      background: var(--accent-interactive-bg);
+    }
+
+    .domain-group {
+      margin-bottom: 16px;
+    }
+
+    .domain-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .domain-title {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      padding: 0 8px 6px;
+    }
+
+    .subtopic-item {
+      cursor: pointer;
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
+      font-family: inherit;
+      min-height: 36px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+      transition: all 0.15s ease;
+    }
+
+    .subtopic-item:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .subtopic-item.active {
+      background: var(--accent-interactive-bg);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--accent-interactive);
+    }
+
+    .count-badge {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .subtopic-item.active .count-badge {
+      background: rgba(56, 189, 248, 0.25);
+      color: #e0f2fe;
+    }
+
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .search-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .search-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .search-scope-text {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+
+    .search-scope-text strong {
+      color: var(--text-primary);
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .synthesis-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(19, 27, 46, 0.95) 100%);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .synthesis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .synthesis-title {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .synthesis-body {
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      line-height: 1.6;
+      max-width: 78ch;
+    }
+
+    .papers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .papers-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .paper-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.15s ease;
+    }
+
+    .paper-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .paper-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cat-tag {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .meta-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .arxiv-link {
+      color: var(--accent-interactive);
+      text-decoration: none;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--accent-interactive-bg);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+    }
+
+    .arxiv-link:hover {
+      background: rgba(56, 189, 248, 0.24);
+      text-decoration: underline;
+    }
+
+    .paper-title {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.38;
+      letter-spacing: -0.01em;
+    }
+
+    .paper-authors {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-top: -6px;
+    }
+
+    .tldr-box {
+      background: rgba(52, 211, 153, 0.08);
+      border-left: 3px solid var(--status-verified);
+      padding: 12px 14px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .tldr-label {
+      display: block;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--status-verified);
+      margin-bottom: 4px;
+    }
+
+    .method-problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mp-item {
+      background: rgba(11, 15, 23, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .mp-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .mp-val {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .card-disclosure {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 10px;
+    }
+
+    .card-disclosure summary {
+      cursor: pointer;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-secondary);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      user-select: none;
+    }
+
+    .card-disclosure summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .card-disclosure summary:hover {
+      color: var(--text-primary);
+    }
+
+    .disclosure-chevron {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: transform 0.18s ease;
+    }
+
+    .card-disclosure[open] .disclosure-chevron {
+      transform: rotate(180deg);
+    }
+
+    .disclosure-body {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .limitation-box {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+    }
+
+    .limitation-box strong {
+      color: var(--warning-amber);
+    }
+
+    /* =========================================================================
+       4. TAB 2: 3D KNOWLEDGE GALAXY (WIKIPEDIA / CONNECTED PAPERS 3D WORLD)
+       ========================================================================= */
+    .galaxy-controls-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .galaxy-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .galaxy-layout {
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 1100px) {
+      .galaxy-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .galaxy-viewport-card {
+      position: relative;
+      background: radial-gradient(circle at 50% 45%, #131c33 0%, #070a12 75%, #04060b 100%);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      height: 680px;
+      overflow: hidden;
+      box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.7);
+      user-select: none;
+    }
+
+    #galaxy-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #galaxy-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* Floating Glassmorphic HUD Overlays inside 3D World */
+    .galaxy-hud-top {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .galaxy-legend-box {
+      pointer-events: auto;
+      background: rgba(11, 15, 23, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: var(--text-xs);
+      color: var(--text-secondary);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    .galaxy-cam-controls {
+      pointer-events: auto;
+      display: flex;
+      gap: 6px;
+      background: rgba(11, 15, 23, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px;
+    }
+
+    .hud-btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+    }
+
+    .hud-btn:hover {
+      background: var(--bg-elevated-hover);
+      border-color: var(--accent-interactive);
+    }
+
+    .hud-btn.active {
+      background: var(--accent-interactive-bg);
+      border-color: var(--accent-interactive);
+      color: #7dd3fc;
+    }
+
+    .galaxy-hud-bottom {
+      position: absolute;
+      bottom: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .galaxy-hint-pill {
+      background: rgba(11, 15, 23, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: var(--text-secondary);
+    }
+
+    /* Right-Hand 3D Node Inspector Panel */
+    .galaxy-inspector {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 680px;
+      overflow-y: auto;
+    }
+
+    .inspector-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    .inspector-title {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.35;
+    }
+
+    .inspector-subtitle {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-top: -8px;
+    }
+
+    .connections-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .conn-item {
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      background: rgba(11, 15, 23, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .conn-item:hover {
+      background: var(--bg-elevated);
+      border-color: var(--accent-interactive);
+      transform: translateX(2px);
+    }
+
+    .conn-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+
+    .conn-item-title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.35;
+    }
+
+    .conn-item-reason {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    /* =========================================================================
+       5. TAB 3: AGENT ACTIVITY LOG TABLE (lists-and-tables.md)
+       ========================================================================= */
+    .matrix-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      overflow-x: auto;
+    }
+
+    .matrix-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-sm);
+    }
+
+    .log-table th,
+    .log-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .log-table th {
+      background: var(--bg-canvas);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .log-table tbody tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .log-badge {
+      display: inline-block;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- SLIM STICKY MACOS TOOLBAR -->
+  <header class="top-toolbar">
+    <div class="toolbar-inner">
+      <div class="brand-group">
+        <span class="brand-title">ScholarPulse</span>
+        <div id="agent-status-pill" class="status-pill" role="status" aria-live="polite">
+          <span class="pulse-dot"></span>
+          <span id="agent-status-text">ArXiv Agent Active</span>
+        </div>
+      </div>
+
+      <!-- Segmented Navigation -->
+      <nav class="segmented-nav" aria-label="Primary Views">
+        <button class="seg-btn active" id="tab-btn-explorer" onclick="switchTab('explorer')">
+          <span>Paper Library</span>
+          <span class="seg-count" id="nav-count-papers">0</span>
+        </button>
+        <button class="seg-btn" id="tab-btn-galaxy" onclick="switchTab('galaxy')">
+          <span>3D Knowledge World</span>
+          <span class="seg-count" id="nav-count-nodes">0</span>
+        </button>
+        <button class="seg-btn" id="tab-btn-logs" onclick="switchTab('logs')">
+          <span>Activity Log</span>
+        </button>
+      </nav>
+
+      <div class="toolbar-actions">
+        <button class="btn btn-primary" onclick="triggerHarvestStep()">
+          + Fetch Next ArXiv Paper
+        </button>
+        <button class="btn btn-galaxy" onclick="switchTab('galaxy')">
+          Explore 3D World
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-shell">
+    <!-- AGENT RESEARCH FOCUS & SUMMARY STRIP -->
+    <section class="mission-panel" aria-label="Agent Research Focus and Summary">
+      <div class="mission-top">
+        <div class="mission-title-group">
+          <span class="section-eyebrow">Unsupervised ArXiv Harvester</span>
+          <h1 class="mission-heading">Set the Research Focus for the Background Agent</h1>
+        </div>
+        <div class="active-focus-badge">
+          <span>Current Focus:</span>
+          <strong id="active-theme-label">All AI &amp; Systems Frontiers (General)</strong>
+        </div>
+      </div>
+
+      <div class="theme-form-row">
+        <input
+          type="text"
+          id="theme-input"
+          class="text-input"
+          aria-label="Research focus topic for the agent to collect"
+          placeholder="Enter a research topic to collect (e.g., 'Fast LLM inference on laptops', 'Robot manipulation', 'Stop hallucinations')..."
+          onkeydown="if(event.key==='Enter') applyResearchTheme()"
+        />
+        <button class="btn btn-primary" onclick="applyResearchTheme()">
+          Set Focus &amp; Fetch Paper
+        </button>
+        <button class="btn" onclick="presetTheme('all')">
+          Reset to All Topics
+        </button>
+      </div>
+
+      <div class="pills-row">
+        <span class="pills-label">Suggested Topics:</span>
+        <button class="pill-btn" onclick="presetTheme('Fast LLM Inference & Quantization on Consumer Hardware')">Fast LLM Inference &amp; Quantization</button>
+        <button class="pill-btn" onclick="presetTheme('Autonomous Coding & Tool-Using Agents')">Autonomous Coding Agents</button>
+        <button class="pill-btn" onclick="presetTheme('Robot Manipulation & Vision-Language-Action Control')">Robotics &amp; Control</button>
+        <button class="pill-btn" onclick="presetTheme('Stop RAG Hallucinations & Factuality Verification')">Stop AI Hallucinations</button>
+        <button class="pill-btn" onclick="presetTheme('De Novo Protein Design & Molecular Docking')">Protein &amp; Drug Discovery</button>
+      </div>
+
+      <div class="summary-strip">
+        <div class="stat-card">
+          <span class="stat-label">Verified ArXiv Papers</span>
+          <span class="stat-value" id="metric-papers">0</span>
+          <span class="stat-caption">100% Title &amp; Abstract Grounded</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Organized Sub-Topics</span>
+          <span class="stat-value" id="metric-categories">0</span>
+          <span class="stat-caption">Auto-Grouped into 2 Levels</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">3D Concept Connections</span>
+          <span class="stat-value" id="metric-connections" style="color: var(--galaxy-accent);">0</span>
+          <span class="stat-caption">Topic &amp; Cross-Paper Links Mapped</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Off-Topic Papers Skipped</span>
+          <span class="stat-value" id="metric-skipped" style="color: var(--status-verified);">0</span>
+          <span class="stat-caption" id="metric-tokens-saved">0 tokens saved by focus filter</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: PAPER LIBRARY & SIMPLE KEYWORD SEARCH -->
+    <div id="tab-explorer" class="workspace">
+      <aside class="sidebar" aria-label="Topics and Categories">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Topics &amp; Categories</span>
+          <button class="sidebar-reset-btn" onclick="selectCategory('', '')">Show All</button>
+        </div>
+        <div id="taxonomy-tree"></div>
+      </aside>
+
+      <main class="content-area">
+        <!-- Library Search Panel -->
+        <div class="search-panel">
+          <div class="search-bar-header">
+            <span class="section-eyebrow">Search Collected Library</span>
+            <span class="search-scope-text" id="search-results-summary">Showing all collected papers</span>
+          </div>
+          <div class="search-row">
+            <input
+              type="search"
+              id="search-input"
+              class="text-input"
+              aria-label="Search collected papers by everyday keywords"
+              placeholder="Filter library by plain-English keywords (e.g., 'fast inference', 'run on laptop', 'stop looping', 'robot hand')..."
+              oninput="debounceSearch()"
+            />
+            <button class="btn btn-primary" id="voice-btn" onclick="startVoiceSearch()">
+              Voice Search
+            </button>
+            <button class="btn" onclick="clearSearch()">Clear Filter</button>
+          </div>
+          <div class="pills-row">
+            <span class="pills-label">Popular Keywords:</span>
+            <button class="pill-btn" onclick="setKeyword('fast inference')">fast inference</button>
+            <button class="pill-btn" onclick="setKeyword('run on laptop')">run on laptop</button>
+            <button class="pill-btn" onclick="setKeyword('stop looping')">stop looping</button>
+            <button class="pill-btn" onclick="setKeyword('agent memory')">agent memory</button>
+            <button class="pill-btn" onclick="setKeyword('robot hand')">robot hand</button>
+            <button class="pill-btn" onclick="setKeyword('stop hallucination')">stop hallucination</button>
+            <button class="pill-btn" onclick="setKeyword('protein folding')">protein folding</button>
+            <button class="pill-btn" onclick="setKeyword('save money')">save money</button>
+          </div>
+        </div>
+
+        <!-- Topic Key Takeaways Banner -->
+        <div class="synthesis-banner" id="synthesis-banner">
+          <div class="synthesis-header">
+            <span class="synthesis-title" id="synthesis-title">Key Takeaways Across All Topics</span>
+            <button class="btn" onclick="speakCurrentSynthesis()">
+              Listen to Summary
+            </button>
+          </div>
+          <div class="synthesis-body" id="synthesis-body">
+            Loading topic synthesis...
+          </div>
+        </div>
+
+        <!-- Paper Cards Grid -->
+        <div id="papers-grid" class="papers-grid"></div>
+      </main>
+    </div>
+
+    <!-- TAB 2: 3D KNOWLEDGE WORLD (CONNECTING TOPICS, CONCEPTS & PAPERS) -->
+    <div id="tab-galaxy" class="content-area hidden">
+      <div class="galaxy-controls-bar">
+        <div class="galaxy-top-row">
+          <div>
+            <span class="section-eyebrow" style="color: var(--galaxy-accent);">Interactive 3D Knowledge Constellation</span>
+            <h2 style="font-size: var(--text-lg); color: var(--text-primary); margin-top: 2px;">
+              Explore How Research Topics, Concepts &amp; Papers Connect in 3D Space
+            </h2>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input
+              type="search"
+              id="galaxy-search-input"
+              class="text-input"
+              style="min-width: 280px; min-height: 36px; padding: 6px 12px; font-size: var(--text-sm);"
+              placeholder="Highlight concept or paper in 3D (e.g., 'quantization', 'diffusion', 'agent')..."
+              oninput="onGalaxySearch(this.value)"
+            />
+            <button class="btn btn-primary" onclick="triggerHarvestAndFocus3D()">
+              + Spawn Next ArXiv Paper in 3D
+            </button>
+          </div>
+        </div>
+
+        <div class="pills-row">
+          <span class="pills-label">Highlight Constellation:</span>
+          <button class="pill-btn active" id="gfilter-all" onclick="setGalaxyFilter('all', this)">All Connections</button>
+          <button class="pill-btn" id="gfilter-bridges" onclick="setGalaxyFilter('bridges', this)">Cross-Topic Concept Bridges</button>
+          <button class="pill-btn" onclick="setGalaxyFilter('inference', this)">Fast Inference &amp; Quantization</button>
+          <button class="pill-btn" onclick="setGalaxyFilter('agents', this)">Autonomous Agents &amp; Reasoning</button>
+          <button class="pill-btn" onclick="setGalaxyFilter('diffusion', this)">Diffusion (Robotics &harr; Biology)</button>
+          <button class="pill-btn" onclick="setGalaxyFilter('rag', this)">Factuality &amp; Hallucination Guards</button>
+        </div>
+      </div>
+
+      <div class="galaxy-layout">
+        <!-- 3D Interactive Space Canvas -->
+        <div class="galaxy-viewport-card" id="galaxy-viewport">
+          <canvas id="galaxy-canvas"></canvas>
+
+          <div class="galaxy-hud-top">
+            <div class="galaxy-legend-box">
+              <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">3D Node &amp; Link Key</div>
+              <div class="legend-row">
+                <span><span class="legend-dot" style="background: #38bdf8; box-shadow: 0 0 8px #38bdf8;"></span>Domain Star</span>
+                <span><span class="legend-dot" style="background: #34d399; box-shadow: 0 0 8px #34d399;"></span>Sub-Topic Hub</span>
+                <span><span class="legend-dot" style="background: #f8fafc; box-shadow: 0 0 8px #f8fafc;"></span>ArXiv Paper</span>
+              </div>
+              <div class="legend-row" style="color: var(--text-muted);">
+                <span>Solid Line: Topic Hierarchy</span>
+                <span style="color: #fbbf24;">Glowing Bridge: Shared Concept / Keyword</span>
+              </div>
+            </div>
+
+            <div class="galaxy-cam-controls">
+              <button class="hud-btn active" id="btn-autorotate" onclick="toggleAutoRotate()">Auto-Orbit: ON</button>
+              <button class="hud-btn" onclick="zoomGalaxy(1.22)">Zoom +</button>
+              <button class="hud-btn" onclick="zoomGalaxy(0.82)">Zoom &minus;</button>
+              <button class="hud-btn" onclick="resetGalaxyCamera()">Reset 3D View</button>
+            </div>
+          </div>
+
+          <div class="galaxy-hud-bottom">
+            <span class="galaxy-hint-pill">Drag to rotate in 3D &middot; Scroll to zoom &middot; Click any star, topic, or paper to fly &amp; inspect</span>
+            <span class="galaxy-hint-pill" id="galaxy-stats-pill">0 Nodes &middot; 0 Links</span>
+          </div>
+        </div>
+
+        <!-- Right-Hand Connected Node Inspector -->
+        <aside class="galaxy-inspector" id="galaxy-inspector" aria-label="Selected 3D Node Details">
+          <div id="inspector-content"></div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- TAB 3: AGENT ACTIVITY LOG -->
+    <div id="tab-logs" class="content-area hidden">
+      <div class="matrix-container">
+        <div class="matrix-header">
+          <h2 style="font-size: var(--text-lg); color: var(--text-primary);">
+            Background ArXiv Agent Activity Log
+          </h2>
+          <span style="font-size: var(--text-sm); color: var(--text-muted);">
+            Live record of papers harvested, off-topic papers skipped, and categories updated
+          </span>
+        </div>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event Type</th>
+              <th>Paper / ArXiv Query</th>
+              <th>Action Taken</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentDomain = "";
+    let currentSubtopic = "";
+    let searchTimer = null;
+    let latestState = null;
+    let activeTab = "explorer";
+
+    /* =====================================================================
+       3D KNOWLEDGE GALAXY ENGINE (Pure HTML5 3D Perspective + Force Physics)
+       ===================================================================== */
+    const DOMAIN_COLORS = {
+      "Machine Learning": "#38bdf8",
+      "Artificial Intelligence": "#a78bfa",
+      "Robotics & Embodied AI": "#34d399",
+      "Robotics & Control": "#34d399",
+      "Systems & Computer Architecture": "#fbbf24",
+      "Information Retrieval": "#fbbf24",
+      "Computational Science & Bio": "#f472b6",
+      "Computational Biology": "#f472b6",
+      "Quantum Physics": "#fb7185"
+    };
+
+    const FALLBACK_PALETTE = ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#f472b6", "#fb7185", "#60a5fa"];
+
+    let galaxyNodes = [];
+    let galaxyEdges = [];
+    let galaxyStars = [];
+    let nodeById = {};
+    let lastPaperCount = -1;
+
+    // 3D Camera & Interaction State
+    let camRotY = 0.45;
+    let camRotX = 0.28;
+    let camVelY = 0;
+    let camVelX = 0;
+    let camZoom = 1.0;
+    let targetZoom = 1.0;
+    let camFocus = { x: 0, y: 0, z: 0 };
+    let targetFocus = { x: 0, y: 0, z: 0 };
+    let autoRotate = true;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let pointerMoved = false;
+
+    let hoveredNodeId = null;
+    let selectedNodeId = null;
+    let galaxyFilterMode = "all";
+    let galaxySearchQuery = "";
+    let animTick = 0;
+
+    function getDomainColor(domainName) {
+      if (DOMAIN_COLORS[domainName]) return DOMAIN_COLORS[domainName];
+      let hash = 0;
+      for (let i = 0; i < domainName.length; i++) {
+        hash = domainName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return FALLBACK_PALETTE[Math.abs(hash) % FALLBACK_PALETTE.length];
+    }
+
+    function initAmbientStarfield() {
+      galaxyStars = [];
+      for (let i = 0; i < 200; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = 550 + Math.random() * 650;
+        galaxyStars.push({
+          x: r * Math.sin(phi) * Math.cos(theta),
+          y: r * Math.sin(phi) * Math.sin(theta),
+          z: r * Math.cos(phi),
+          size: 0.7 + Math.random() * 1.6,
+          alpha: 0.2 + Math.random() * 0.65
+        });
+      }
+    }
+
+    function shortPaperLabel(title) {
+      if (!title) return "Paper";
+      const colonIdx = title.indexOf(":");
+      if (colonIdx > 2 && colonIdx < 28) {
+        return title.slice(0, colonIdx);
+      }
+      const words = title.split(/\s+/);
+      return words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
+    }
+
+    function computeSharedConcepts(paperA, paperB) {
+      const shared = [];
+      const kwA = (paperA.simple_keywords || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+      const kwB = (paperB.simple_keywords || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+
+      kwA.forEach(a => {
+        if (kwB.includes(a) && !shared.includes(a)) {
+          shared.push(a);
+        }
+      });
+
+      if (paperA.method_tag && paperA.method_tag === paperB.method_tag) {
+        shared.push(paperA.method_tag);
+      }
+      if (paperA.problem_tag && paperA.problem_tag === paperB.problem_tag) {
+        shared.push(paperA.problem_tag);
+      }
+
+      const textA = `${paperA.title} ${paperA.method_tag} ${paperA.problem_tag} ${paperA.simple_keywords}`.toLowerCase();
+      const textB = `${paperB.title} ${paperB.method_tag} ${paperB.problem_tag} ${paperB.simple_keywords}`.toLowerCase();
+
+      const bridgeThemes = [
+        { token: "diffusion", label: "Diffusion Generative Modeling" },
+        { token: "quantiz", label: "Low-Bit Quantization" },
+        { token: "inference", label: "Fast Inference Acceleration" },
+        { token: "kv-cache", label: "KV-Cache & Memory Compression" },
+        { token: "attention", label: "Attention Kernel Optimization" },
+        { token: "agent", label: "Autonomous Agent Architecture" },
+        { token: "tree", label: "Lookahead Tree Search & Planning" },
+        { token: "reasoning", label: "Multi-Step Reasoning" },
+        { token: "hallucinat", label: "Factuality & Hallucination Guard" },
+        { token: "retrieval", label: "Retrieval-Augmented Context" },
+        { token: "molecular", label: "3D Biomolecular Structure" }
+      ];
+
+      bridgeThemes.forEach(bt => {
+        if (textA.includes(bt.token) && textB.includes(bt.token) && !shared.includes(bt.label)) {
+          shared.push(bt.label);
+        }
+      });
+
+      return shared;
+    }
+
+    function buildGalaxyGraph(papers, categories) {
+      if (galaxyStars.length === 0) initAmbientStarfield();
+
+      const prevPositions = {};
+      galaxyNodes.forEach(n => {
+        prevPositions[n.id] = { x: n.x, y: n.y, z: n.z };
+      });
+
+      galaxyNodes = [];
+      galaxyEdges = [];
+      nodeById = {};
+
+      const domainsList = Array.from(new Set(categories.map(c => c.domain)));
+
+      // 1. Create Domain Star Nodes arranged in a 3D ring
+      domainsList.forEach((dom, idx) => {
+        const angle = (idx / Math.max(1, domainsList.length)) * Math.PI * 2;
+        const id = `domain:${dom}`;
+        const prev = prevPositions[id];
+        const color = getDomainColor(dom);
+        const domPapers = papers.filter(p => p.domain === dom);
+        const node = {
+          id,
+          type: "domain",
+          label: dom,
+          fullTitle: `${dom} (Research Domain)`,
+          domain: dom,
+          color,
+          radius: 15,
+          paperCount: domPapers.length,
+          description: `Major research constellation containing ${domPapers.length} verified ArXiv papers.`,
+          x: prev ? prev.x : Math.cos(angle) * 210,
+          y: prev ? prev.y : (idx % 2 === 0 ? -45 : 45),
+          z: prev ? prev.z : Math.sin(angle) * 210,
+          vx: 0,
+          vy: 0,
+          vz: 0
+        };
+        galaxyNodes.push(node);
+        nodeById[id] = node;
+      });
+
+      // 2. Create Sub-Topic Planetary Hubs
+      categories.forEach((cat, idx) => {
+        const id = `subtopic:${cat.domain}:::${cat.subtopic}`;
+        const parentId = `domain:${cat.domain}`;
+        const parent = nodeById[parentId] || { x: 0, y: 0, z: 0 };
+        const prev = prevPositions[id];
+        const angle = (idx / Math.max(1, categories.length)) * Math.PI * 2 + 0.4;
+        const color = getDomainColor(cat.domain);
+        const node = {
+          id,
+          type: "subtopic",
+          label: cat.subtopic,
+          fullTitle: `${cat.domain} › ${cat.subtopic}`,
+          domain: cat.domain,
+          subtopic: cat.subtopic,
+          color,
+          radius: 10.5,
+          paperCount: cat.paper_count,
+          description: cat.live_synthesis,
+          x: prev ? prev.x : parent.x + Math.cos(angle) * 75,
+          y: prev ? prev.y : parent.y + ((idx % 3) - 1) * 45,
+          z: prev ? prev.z : parent.z + Math.sin(angle) * 75,
+          vx: 0,
+          vy: 0,
+          vz: 0
+        };
+        galaxyNodes.push(node);
+        nodeById[id] = node;
+
+        if (nodeById[parentId]) {
+          galaxyEdges.push({
+            source: parentId,
+            target: id,
+            kind: "hierarchy",
+            reason: "Domain Sub-Topic Hierarchy",
+            strength: 1.0
+          });
+        }
+      });
+
+      // 3. Create ArXiv Paper Nodes
+      papers.forEach((p, idx) => {
+        const id = `paper:${p.arxiv_id}`;
+        const subId = `subtopic:${p.domain}:::${p.subtopic}`;
+        const parent = nodeById[subId] || nodeById[`domain:${p.domain}`] || { x: 0, y: 0, z: 0 };
+        const prev = prevPositions[id];
+        const angle = (idx * 2.39996);
+        const color = getDomainColor(p.domain);
+        const node = {
+          id,
+          type: "paper",
+          label: shortPaperLabel(p.title),
+          fullTitle: p.title,
+          arxiv_id: p.arxiv_id,
+          authors: p.authors,
+          published: p.published,
+          domain: p.domain,
+          subtopic: p.subtopic,
+          tldr: p.tldr,
+          method_tag: p.method_tag,
+          problem_tag: p.problem_tag,
+          open_limitation: p.open_limitation,
+          simple_keywords: p.simple_keywords,
+          color,
+          radius: 6.8,
+          x: prev ? prev.x : parent.x + Math.cos(angle) * 65,
+          y: prev ? prev.y : parent.y + Math.sin(angle * 0.7) * 60,
+          z: prev ? prev.z : parent.z + Math.sin(angle) * 65,
+          vx: 0,
+          vy: 0,
+          vz: 0
+        };
+        galaxyNodes.push(node);
+        nodeById[id] = node;
+
+        if (nodeById[subId]) {
+          galaxyEdges.push({
+            source: subId,
+            target: id,
+            kind: "category",
+            reason: `Indexed in ${p.subtopic}`,
+            strength: 0.85
+          });
+        }
+      });
+
+      // 4. Create Cross-Paper Concept & Keyword Links (Top-2 k-NN pruning so 100+ papers stay crisp)
+      const candidateLinksByPaper = {};
+      papers.forEach(p => { candidateLinksByPaper[p.arxiv_id] = []; });
+
+      for (let i = 0; i < papers.length; i++) {
+        for (let j = i + 1; j < papers.length; j++) {
+          const pA = papers[i];
+          const pB = papers[j];
+          const shared = computeSharedConcepts(pA, pB);
+          if (shared.length > 0) {
+            const isCrossDomain = pA.domain !== pB.domain || pA.subtopic !== pB.subtopic;
+            const score = shared.length + (isCrossDomain ? 1.5 : 0);
+            const edgeObj = {
+              source: `paper:${pA.arxiv_id}`,
+              target: `paper:${pB.arxiv_id}`,
+              kind: isCrossDomain ? "bridge" : "concept",
+              reason: `Shared: ${shared.slice(0, 2).join(" · ")}`,
+              sharedConcepts: shared,
+              strength: isCrossDomain ? 0.32 : 0.48,
+              score
+            };
+            candidateLinksByPaper[pA.arxiv_id].push(edgeObj);
+            candidateLinksByPaper[pB.arxiv_id].push(edgeObj);
+          }
+        }
+      }
+
+      const addedPairKeys = new Set();
+      papers.forEach(p => {
+        const ranked = (candidateLinksByPaper[p.arxiv_id] || [])
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2);
+        ranked.forEach(edgeObj => {
+          const pairKey = [edgeObj.source, edgeObj.target].sort().join("--");
+          if (!addedPairKeys.has(pairKey)) {
+            addedPairKeys.add(pairKey);
+            galaxyEdges.push(edgeObj);
+          }
+        });
+      });
+
+      for (let step = 0; step < 35; step++) {
+        stepGalaxyPhysics();
+      }
+
+      const navNodesEl = document.getElementById("nav-count-nodes");
+      if (navNodesEl) navNodesEl.textContent = galaxyNodes.length;
+      const metricConnEl = document.getElementById("metric-connections");
+      if (metricConnEl) metricConnEl.textContent = galaxyEdges.length;
+      const statsPill = document.getElementById("galaxy-stats-pill");
+      if (statsPill) {
+        statsPill.textContent = `${galaxyNodes.length} 3D Nodes · ${galaxyEdges.length} Concept Links`;
+      }
+
+      if (!selectedNodeId || !nodeById[selectedNodeId]) {
+        const defaultPaper = papers[0] ? `paper:${papers[0].arxiv_id}` : (galaxyNodes[0] && galaxyNodes[0].id);
+        if (defaultPaper) {
+          selectGalaxyNode(defaultPaper, false);
+        }
+      } else {
+        renderInspector(nodeById[selectedNodeId]);
+      }
+    }
+
+    function stepGalaxyPhysics() {
+      const N = galaxyNodes.length;
+      if (N === 0) return;
+
+      for (let i = 0; i < N; i++) {
+        const a = galaxyNodes[i];
+        for (let j = i + 1; j < N; j++) {
+          const b = galaxyNodes[j];
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          let dz = a.z - b.z;
+          let distSq = dx * dx + dy * dy + dz * dz + 40;
+          let dist = Math.sqrt(distSq);
+          const repulse = (a.type === "domain" && b.type === "domain") ? 4200 : 1450;
+          const f = repulse / distSq;
+          const fx = (dx / dist) * f;
+          const fy = (dy / dist) * f;
+          const fz = (dz / dist) * f;
+          a.vx += fx;
+          a.vy += fy;
+          a.vz += fz;
+          b.vx -= fx;
+          b.vy -= fy;
+          b.vz -= fz;
+        }
+      }
+
+      for (let i = 0; i < galaxyEdges.length; i++) {
+        const e = galaxyEdges[i];
+        const a = nodeById[e.source];
+        const b = nodeById[e.target];
+        if (!a || !b) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = b.z - a.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        const targetDist =
+          e.kind === "hierarchy" ? 85 :
+          e.kind === "category" ? 72 :
+          e.kind === "bridge" ? 165 : 115;
+        const k = 0.018 * (e.strength || 0.5);
+        const force = (dist - targetDist) * k;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        const fz = (dz / dist) * force;
+        a.vx += fx;
+        a.vy += fy;
+        a.vz += fz;
+        b.vx -= fx;
+        b.vy -= fy;
+        b.vz -= fz;
+      }
+
+      for (let i = 0; i < N; i++) {
+        const n = galaxyNodes[i];
+        n.vx -= n.x * 0.0045;
+        n.vy -= n.y * 0.0055;
+        n.vz -= n.z * 0.0045;
+
+        n.vx *= 0.82;
+        n.vy *= 0.82;
+        n.vz *= 0.82;
+
+        n.x += n.vx;
+        n.y += n.vy;
+        n.z += n.vz;
+      }
+    }
+
+    function project3D(x, y, z, width, height) {
+      const rx = x - camFocus.x;
+      const ry = y - camFocus.y;
+      const rz = z - camFocus.z;
+
+      const cosY = Math.cos(camRotY);
+      const sinY = Math.sin(camRotY);
+      const x1 = rx * cosY - rz * sinY;
+      const z1 = rz * cosY + rx * sinY;
+
+      const cosX = Math.cos(camRotX);
+      const sinX = Math.sin(camRotX);
+      const y2 = ry * cosX - z1 * sinX;
+      const z2 = z1 * cosX + ry * sinX;
+
+      const fov = 640 * camZoom;
+      const viewerDist = 660;
+      const depth = viewerDist + z2;
+      if (depth < 60) return null;
+
+      const scale = fov / depth;
+      return {
+        sx: width / 2 + x1 * scale,
+        sy: height / 2 + y2 * scale,
+        scale,
+        depth
+      };
+    }
+
+    function nodeMatchesFilter(node) {
+      if (galaxySearchQuery) {
+        const hay = `${node.label} ${node.fullTitle} ${node.domain || ""} ${node.subtopic || ""} ${node.simple_keywords || ""} ${node.method_tag || ""} ${node.problem_tag || ""}`.toLowerCase();
+        if (!hay.includes(galaxySearchQuery)) return false;
+      }
+      if (galaxyFilterMode === "all") return true;
+      if (galaxyFilterMode === "bridges") {
+        return galaxyEdges.some(
+          e => e.kind === "bridge" && (e.source === node.id || e.target === node.id)
+        );
+      }
+      const text = `${node.fullTitle} ${node.domain || ""} ${node.subtopic || ""} ${node.simple_keywords || ""} ${node.method_tag || ""}`.toLowerCase();
+      if (galaxyFilterMode === "inference") {
+        return text.includes("inference") || text.includes("quantiz") || text.includes("attention") || text.includes("hardware") || text.includes("decoding");
+      }
+      if (galaxyFilterMode === "agents") {
+        return text.includes("agent") || text.includes("reasoning") || text.includes("thought") || text.includes("memory") || text.includes("tool");
+      }
+      if (galaxyFilterMode === "diffusion") {
+        return text.includes("diffusion") || text.includes("robotics") || text.includes("manipulation") || text.includes("molecular") || text.includes("rna");
+      }
+      if (galaxyFilterMode === "rag") {
+        return text.includes("hallucinat") || text.includes("rag") || text.includes("retrieval") || text.includes("factual");
+      }
+      return true;
+    }
+
+    function renderGalaxyFrame() {
+      requestAnimationFrame(renderGalaxyFrame);
+      animTick += 0.016;
+
+      const canvas = document.getElementById("galaxy-canvas");
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+        canvas.width = Math.floor(rect.width * dpr);
+        canvas.height = Math.floor(rect.height * dpr);
+      }
+
+      const ctx = canvas.getContext("2d");
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      const W = rect.width;
+      const H = rect.height;
+
+      stepGalaxyPhysics();
+
+      if (autoRotate && !isDragging) {
+        camRotY += 0.0028;
+      } else if (!isDragging) {
+        camRotY += camVelY;
+        camRotX += camVelX;
+        camVelY *= 0.92;
+        camVelX *= 0.92;
+      }
+      camRotX = Math.max(-1.25, Math.min(1.25, camRotX));
+      camZoom += (targetZoom - camZoom) * 0.12;
+      camFocus.x += (targetFocus.x - camFocus.x) * 0.09;
+      camFocus.y += (targetFocus.y - camFocus.y) * 0.09;
+      camFocus.z += (targetFocus.z - camFocus.z) * 0.09;
+
+      ctx.clearRect(0, 0, W, H);
+
+      for (let i = 0; i < galaxyStars.length; i++) {
+        const st = galaxyStars[i];
+        const proj = project3D(st.x + camFocus.x * 0.7, st.y + camFocus.y * 0.7, st.z + camFocus.z * 0.7, W, H);
+        if (!proj) continue;
+        ctx.fillStyle = `rgba(203, 213, 225, ${st.alpha * 0.55})`;
+        ctx.beginPath();
+        ctx.arc(proj.sx, proj.sy, st.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const projectedMap = {};
+      const activeNodeId = hoveredNodeId || selectedNodeId;
+      const neighborSet = new Set();
+      if (activeNodeId) {
+        neighborSet.add(activeNodeId);
+        galaxyEdges.forEach(e => {
+          if (e.source === activeNodeId) neighborSet.add(e.target);
+          if (e.target === activeNodeId) neighborSet.add(e.source);
+        });
+      }
+
+      galaxyNodes.forEach(n => {
+        const p = project3D(n.x, n.y, n.z, W, H);
+        if (p) {
+          projectedMap[n.id] = { ...p, node: n, matched: nodeMatchesFilter(n) };
+        }
+      });
+
+      galaxyEdges.forEach((e, idx) => {
+        const pA = projectedMap[e.source];
+        const pB = projectedMap[e.target];
+        if (!pA || !pB) return;
+
+        const isConnectedToActive =
+          activeNodeId && (e.source === activeNodeId || e.target === activeNodeId);
+        const bothMatched = pA.matched && pB.matched;
+
+        if (galaxyFilterMode === "bridges" && e.kind !== "bridge" && !isConnectedToActive) {
+          return;
+        }
+
+        let strokeAlpha = 0.22;
+        let lineWidth = 1.1;
+        let strokeColor = pA.node.color;
+
+        if (e.kind === "bridge") {
+          strokeColor = "#fbbf24";
+          strokeAlpha = 0.35;
+        } else if (e.kind === "concept") {
+          strokeColor = "#94a3b8";
+          strokeAlpha = 0.2;
+        }
+
+        if (isConnectedToActive) {
+          strokeAlpha = 0.88;
+          lineWidth = 2.3;
+          if (e.kind === "bridge") strokeColor = "#fbbf24";
+        } else if (!bothMatched) {
+          strokeAlpha = 0.04;
+        } else if (activeNodeId) {
+          strokeAlpha *= 0.42;
+        }
+
+        ctx.strokeStyle = hexToRgba(strokeColor, strokeAlpha);
+        ctx.lineWidth = lineWidth;
+        if (e.kind === "bridge") {
+          ctx.setLineDash([5, 4]);
+        } else {
+          ctx.setLineDash([]);
+        }
+        ctx.beginPath();
+        ctx.moveTo(pA.sx, pA.sy);
+        ctx.lineTo(pB.sx, pB.sy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (isConnectedToActive || (bothMatched && e.kind === "bridge")) {
+          const t = ((animTick * 0.45 + idx * 0.17) % 1);
+          const px = pA.sx + (pB.sx - pA.sx) * t;
+          const py = pA.sy + (pB.sy - pA.sy) * t;
+          ctx.fillStyle = e.kind === "bridge" ? "#fde68a" : "#e0f2fe";
+          ctx.beginPath();
+          ctx.arc(px, py, isConnectedToActive ? 2.8 : 2.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      const sortedProj = Object.values(projectedMap).sort((a, b) => b.depth - a.depth);
+      const pendingLabels = [];
+
+      sortedProj.forEach(item => {
+        const n = item.node;
+        const isSelected = n.id === selectedNodeId;
+        const isHovered = n.id === hoveredNodeId;
+        const isNeighbor = neighborSet.has(n.id);
+        const r = Math.max(3.5, n.radius * item.scale);
+
+        let opacity = item.matched ? 0.95 : 0.15;
+        if (activeNodeId && !isNeighbor && item.matched) {
+          opacity = 0.38;
+        }
+        if (isSelected || isHovered) {
+          opacity = 1.0;
+        }
+
+        if (n.type === "domain" || isSelected || isHovered || (item.matched && galaxyFilterMode !== "all")) {
+          const glowRadius = r * (isSelected || isHovered ? 2.9 : 2.2);
+          const grad = ctx.createRadialGradient(item.sx, item.sy, r * 0.2, item.sx, item.sy, glowRadius);
+          grad.addColorStop(0, hexToRgba(n.color, 0.45 * opacity));
+          grad.addColorStop(1, hexToRgba(n.color, 0));
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(item.sx, item.sy, glowRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (n.type === "domain" || isSelected) {
+          ctx.strokeStyle = hexToRgba(isSelected ? "#38bdf8" : n.color, 0.65 * opacity);
+          ctx.lineWidth = isSelected ? 2.0 : 1.2;
+          ctx.beginPath();
+          ctx.arc(item.sx, item.sy, r + 4.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        const sphereGrad = ctx.createRadialGradient(
+          item.sx - r * 0.3,
+          item.sy - r * 0.3,
+          r * 0.1,
+          item.sx,
+          item.sy,
+          r
+        );
+        if (n.type === "paper") {
+          sphereGrad.addColorStop(0, hexToRgba("#ffffff", opacity));
+          sphereGrad.addColorStop(0.55, hexToRgba(n.color, opacity));
+          sphereGrad.addColorStop(1, hexToRgba("#0f172a", opacity));
+        } else {
+          sphereGrad.addColorStop(0, hexToRgba("#ffffff", opacity));
+          sphereGrad.addColorStop(0.4, hexToRgba(n.color, opacity));
+          sphereGrad.addColorStop(1, hexToRgba(n.color, 0.7 * opacity));
+        }
+
+        ctx.fillStyle = sphereGrad;
+        ctx.beginPath();
+        ctx.arc(item.sx, item.sy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        const showLabel =
+          n.type !== "paper" ||
+          isSelected ||
+          isHovered ||
+          isNeighbor ||
+          item.scale > 1.05 ||
+          (item.matched && galaxyFilterMode !== "all");
+
+        if (showLabel && opacity > 0.25) {
+          const priority =
+            (isSelected || isHovered) ? 100 :
+            n.type === "domain" ? 90 :
+            n.type === "subtopic" ? 80 :
+            isNeighbor ? 70 : 50 - item.depth * 0.01;
+          pendingLabels.push({ item, n, r, opacity, isSelected, isHovered, priority });
+        }
+      });
+
+      pendingLabels.sort((a, b) => b.priority - a.priority);
+      const placedBoxes = [];
+
+      pendingLabels.forEach(lbl => {
+        const { item, n, r, opacity, isSelected, isHovered } = lbl;
+        const fontSize =
+          n.type === "domain" ? 13 :
+          n.type === "subtopic" ? 11.5 : 11;
+        ctx.font = `${isSelected || isHovered || n.type !== "paper" ? "600" : "500"} ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif`;
+        const text = n.label;
+        const textWidth = ctx.measureText(text).width;
+        const padX = 7;
+        const padY = 3;
+        const boxW = textWidth + padX * 2;
+        const boxH = fontSize + padY * 2;
+        const boxX = item.sx - boxW / 2;
+        const boxY = item.sy + r + 5;
+
+        if (!isSelected && !isHovered) {
+          const collides = placedBoxes.some(b =>
+            boxX < b.x + b.w + 4 &&
+            boxX + boxW + 4 > b.x &&
+            boxY < b.y + b.h + 3 &&
+            boxY + boxH + 3 > b.y
+          );
+          if (collides) return;
+        }
+        placedBoxes.push({ x: boxX, y: boxY, w: boxW, h: boxH });
+
+        ctx.fillStyle = `rgba(11, 15, 23, ${0.84 * opacity})`;
+        ctx.strokeStyle = isSelected
+          ? "rgba(56, 189, 248, 0.9)"
+          : hexToRgba(n.color, 0.4 * opacity);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isSelected
+          ? "#f8fafc"
+          : `rgba(241, 245, 249, ${opacity})`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, item.sx, boxY + boxH / 2);
+      });
+
+      ctx.restore();
+    }
+
+    function hexToRgba(hex, alpha) {
+      const clean = (hex || "#38bdf8").replace("#", "");
+      const num = parseInt(clean, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function findNodeAtPointer(clientX, clientY) {
+      const canvas = document.getElementById("galaxy-canvas");
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+
+      let closest = null;
+      let minDist = Infinity;
+
+      galaxyNodes.forEach(n => {
+        const p = project3D(n.x, n.y, n.z, rect.width, rect.height);
+        if (!p) return;
+        const hitRadius = Math.max(12, n.radius * p.scale + 8);
+        const dx = mx - p.sx;
+        const dy = my - p.sy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= hitRadius && dist < minDist) {
+          minDist = dist;
+          closest = n;
+        }
+      });
+      return closest;
+    }
+
+    function setupGalaxyInteractions() {
+      const canvas = document.getElementById("galaxy-canvas");
+      if (!canvas) return;
+
+      canvas.addEventListener("mousedown", e => {
+        isDragging = true;
+        pointerMoved = false;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+      });
+
+      window.addEventListener("mousemove", e => {
+        if (isDragging) {
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            pointerMoved = true;
+          }
+          camVelY = dx * 0.0055;
+          camVelX = dy * 0.0055;
+          camRotY += camVelY;
+          camRotX = Math.max(-1.25, Math.min(1.25, camRotX + camVelX));
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          return;
+        }
+
+        if (activeTab === "galaxy") {
+          const hit = findNodeAtPointer(e.clientX, e.clientY);
+          hoveredNodeId = hit ? hit.id : null;
+          canvas.style.cursor = hit ? "pointer" : "grab";
+        }
+      });
+
+      window.addEventListener("mouseup", e => {
+        if (!isDragging) return;
+        isDragging = false;
+        if (!pointerMoved && e.target === canvas) {
+          const hit = findNodeAtPointer(e.clientX, e.clientY);
+          if (hit) {
+            selectGalaxyNode(hit.id, true);
+          }
+        }
+      });
+
+      canvas.addEventListener("wheel", e => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.12 : 0.89;
+        targetZoom = Math.max(0.45, Math.min(2.8, targetZoom * factor));
+      }, { passive: false });
+    }
+
+    function selectGalaxyNode(nodeId, flyCamera = true) {
+      const node = nodeById[nodeId];
+      if (!node) return;
+      selectedNodeId = nodeId;
+      if (flyCamera) {
+        targetFocus = { x: node.x, y: node.y, z: node.z };
+        targetZoom = Math.max(targetZoom, 1.28);
+      }
+      renderInspector(node);
+    }
+
+    function renderInspector(node) {
+      const container = document.getElementById("inspector-content");
+      if (!container || !node) return;
+
+      const connections = [];
+      galaxyEdges.forEach(e => {
+        if (e.source === node.id && nodeById[e.target]) {
+          connections.push({ neighbor: nodeById[e.target], reason: e.reason, kind: e.kind });
+        } else if (e.target === node.id && nodeById[e.source]) {
+          connections.push({ neighbor: nodeById[e.source], reason: e.reason, kind: e.kind });
+        }
+      });
+
+      const typeLabel =
+        node.type === "paper" ? "Verified ArXiv Paper" :
+        node.type === "subtopic" ? "Sub-Topic Hub" : "Domain Constellation";
+
+      const connHtml = connections.map(c => {
+        const nb = c.neighbor;
+        const badgeText =
+          nb.type === "paper" ? `arXiv:${nb.arxiv_id}` :
+          nb.type === "subtopic" ? "Sub-Topic Hub" : "Domain Star";
+        const isBridge = c.kind === "bridge";
+        return `
+          <button type="button" class="conn-item" onclick="selectGalaxyNode('${nb.id.replace(/'/g, "\\'")}', true)">
+            <div class="conn-item-top">
+              <span style="color: ${nb.color};">${badgeText}</span>
+              <span style="color: ${isBridge ? '#fbbf24' : 'var(--text-muted)'};">
+                ${isBridge ? 'Cross-Topic Bridge &rarr;' : 'Fly to Node &rarr;'}
+              </span>
+            </div>
+            <div class="conn-item-title">${nb.fullTitle}</div>
+            <div class="conn-item-reason">${c.reason}</div>
+          </button>
+        `;
+      }).join("");
+
+      if (node.type === "paper") {
+        const kwPills = (node.simple_keywords || "").split(",").slice(0, 6).map(k => {
+          const trimmed = k.trim();
+          return `<button type="button" class="pill-btn" onclick="highlightKeywordInGalaxy('${trimmed.replace(/'/g, "\\'")}')">${trimmed}</button>`;
+        }).join("");
+
+        container.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="inspector-badge" style="background:${hexToRgba(node.color, 0.16)}; color:${node.color}; border:1px solid ${hexToRgba(node.color, 0.45)};">
+              ${typeLabel}
+            </span>
+            <a class="arxiv-link" href="https://arxiv.org/abs/${node.arxiv_id}" target="_blank" rel="noopener">
+              arXiv:${node.arxiv_id} &#8599;
+            </a>
+          </div>
+
+          <h3 class="inspector-title" style="margin-top:10px;">${node.fullTitle}</h3>
+          <div class="inspector-subtitle" style="margin-top:4px;">${node.authors} &middot; ${node.published}</div>
+
+          <div class="tldr-box" style="margin-top:12px;">
+            <span class="tldr-label">Plain-English Summary</span>
+            ${node.tldr}
+          </div>
+
+          <div class="method-problem-grid" style="margin-top:12px;">
+            <div class="mp-item">
+              <div class="mp-label">Core Method</div>
+              <div class="mp-val">${node.method_tag}</div>
+            </div>
+            <div class="mp-item">
+              <div class="mp-label">Problem Solved</div>
+              <div class="mp-val">${node.problem_tag}</div>
+            </div>
+          </div>
+
+          <div class="pills-row" style="margin-top:12px;">
+            <span class="pills-label">Concept Tags:</span>
+            ${kwPills}
+          </div>
+
+          <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-subtle);">
+            <div class="section-eyebrow" style="margin-bottom:8px;">
+              Connected Papers &amp; Topics (${connections.length}) — Click to Hop in 3D
+            </div>
+            <div class="connections-list">${connHtml}</div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span class="inspector-badge" style="background:${hexToRgba(node.color, 0.16)}; color:${node.color}; border:1px solid ${hexToRgba(node.color, 0.45)};">
+              ${typeLabel}
+            </span>
+            <span class="count-badge">${node.paperCount || connections.length} Linked Nodes</span>
+          </div>
+
+          <h3 class="inspector-title" style="margin-top:10px;">${node.fullTitle}</h3>
+
+          <div class="tldr-box" style="margin-top:12px; border-left-color:${node.color}; background:${hexToRgba(node.color, 0.08)};">
+            <span class="tldr-label" style="color:${node.color};">Cluster Synthesis</span>
+            ${node.description}
+          </div>
+
+          <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-subtle);">
+            <div class="section-eyebrow" style="margin-bottom:8px;">
+              Connected Nodes in This Constellation (${connections.length})
+            </div>
+            <div class="connections-list">${connHtml}</div>
+          </div>
+        `;
+      }
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      const btn = document.getElementById("btn-autorotate");
+      if (btn) {
+        btn.textContent = `Auto-Orbit: ${autoRotate ? "ON" : "OFF"}`;
+        btn.classList.toggle("active", autoRotate);
+      }
+    }
+
+    function zoomGalaxy(factor) {
+      targetZoom = Math.max(0.45, Math.min(2.8, targetZoom * factor));
+    }
+
+    function resetGalaxyCamera() {
+      targetFocus = { x: 0, y: 0, z: 0 };
+      targetZoom = 1.0;
+      galaxyFilterMode = "all";
+      galaxySearchQuery = "";
+      const searchEl = document.getElementById("galaxy-search-input");
+      if (searchEl) searchEl.value = "";
+      document.querySelectorAll("#tab-galaxy .pill-btn").forEach(b => b.classList.remove("active"));
+      const allBtn = document.getElementById("gfilter-all");
+      if (allBtn) allBtn.classList.add("active");
+    }
+
+    function setGalaxyFilter(mode, btnEl) {
+      galaxyFilterMode = mode;
+      document.querySelectorAll("#tab-galaxy .pills-row .pill-btn").forEach(b => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+
+      const match = galaxyNodes.find(n => n.type === "paper" && nodeMatchesFilter(n));
+      if (match && mode !== "all") {
+        selectGalaxyNode(match.id, true);
+      } else if (mode === "all") {
+        targetFocus = { x: 0, y: 0, z: 0 };
+        targetZoom = 1.0;
+      }
+    }
+
+    function onGalaxySearch(val) {
+      galaxySearchQuery = (val || "").trim().toLowerCase();
+      if (galaxySearchQuery.length >= 2) {
+        const match = galaxyNodes.find(n => nodeMatchesFilter(n));
+        if (match) {
+          selectGalaxyNode(match.id, true);
+        }
+      }
+    }
+
+    function highlightKeywordInGalaxy(kw) {
+      const searchEl = document.getElementById("galaxy-search-input");
+      if (searchEl) searchEl.value = kw;
+      onGalaxySearch(kw);
+    }
+
+    async function triggerHarvestAndFocus3D() {
+      const res = await fetch("/api/harvest", { method: "POST" });
+      const data = await res.json();
+      await fetchState();
+      if (data && data.paper && data.paper.arxiv_id) {
+        selectGalaxyNode(`paper:${data.paper.arxiv_id}`, true);
+      }
+    }
+
+    /* =====================================================================
+       STANDARD UI & TAB CONTROLLERS
+       ===================================================================== */
+    function switchTab(tab) {
+      activeTab = tab;
+      ["explorer", "galaxy", "logs"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+        document.getElementById("tab-btn-" + t).classList.toggle("active", t === tab);
+      });
+    }
+
+    function debounceSearch() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => fetchState(), 180);
+    }
+
+    function setKeyword(kw) {
+      document.getElementById("search-input").value = kw;
+      switchTab("explorer");
+      fetchState();
+    }
+
+    function clearSearch() {
+      document.getElementById("search-input").value = "";
+      currentDomain = "";
+      currentSubtopic = "";
+      fetchState();
+    }
+
+    function selectCategory(domain, subtopic) {
+      currentDomain = domain;
+      currentSubtopic = subtopic;
+      fetchState();
+    }
+
+    async function fetchState() {
+      const q = encodeURIComponent(document.getElementById("search-input").value.trim());
+      const dom = encodeURIComponent(currentDomain);
+      const sub = encodeURIComponent(currentSubtopic);
+      try {
+        const res = await fetch(`/api/state?q=${q}&domain=${dom}&subtopic=${sub}`);
+        const data = await res.json();
+        latestState = data;
+        renderAll(data);
+      } catch (e) {
+        console.error("Failed to fetch state:", e);
+      }
+    }
+
+    function renderAll(data) {
+      const allPapers = data.all_papers || data.papers;
+
+      if (allPapers.length !== lastPaperCount) {
+        lastPaperCount = allPapers.length;
+        buildGalaxyGraph(allPapers, data.categories);
+      }
+
+      document.getElementById("metric-papers").textContent = data.telemetry.total_papers;
+      document.getElementById("metric-categories").textContent = data.telemetry.total_categories;
+      document.getElementById("nav-count-papers").textContent = data.telemetry.total_papers;
+
+      const skippedEl = document.getElementById("metric-skipped");
+      if (skippedEl) {
+        skippedEl.textContent = data.telemetry.skipped_off_topic_count || 0;
+      }
+      const savedEl = document.getElementById("metric-tokens-saved");
+      if (savedEl) {
+        savedEl.textContent = `${(data.telemetry.tokens_saved_by_theme || 0).toLocaleString()} tokens saved by focus filter`;
+      }
+      const themeLabelEl = document.getElementById("active-theme-label");
+      if (themeLabelEl && data.telemetry.active_theme) {
+        themeLabelEl.textContent = data.telemetry.active_theme;
+      }
+
+      const statusText = document.getElementById("agent-status-text");
+      statusText.textContent =
+        data.telemetry.active_theme && data.telemetry.active_theme !== "All AI & Systems Frontiers (General)"
+          ? `Focusing on: ${data.telemetry.active_theme}`
+          : "ArXiv Agent Active";
+
+      const scopeEl = document.getElementById("search-results-summary");
+      const queryVal = document.getElementById("search-input").value.trim();
+      const scopeName = currentSubtopic
+        ? `${currentDomain} › ${currentSubtopic}`
+        : "All Topics";
+      if (queryVal) {
+        scopeEl.innerHTML = `Showing <strong>${data.papers.length}</strong> matching paper${data.papers.length === 1 ? "" : "s"} in <strong>${scopeName}</strong> for "${queryVal}"`;
+      } else {
+        scopeEl.innerHTML = `Showing <strong>${data.papers.length}</strong> paper${data.papers.length === 1 ? "" : "s"} in <strong>${scopeName}</strong>`;
+      }
+
+      const treeEl = document.getElementById("taxonomy-tree");
+      const grouped = {};
+      data.categories.forEach(c => {
+        if (!grouped[c.domain]) grouped[c.domain] = [];
+        grouped[c.domain].push(c);
+      });
+      let treeHtml = "";
+      Object.keys(grouped).forEach(dom => {
+        treeHtml += `<div class="domain-group"><div class="domain-title">${dom}</div>`;
+        grouped[dom].forEach(c => {
+          const isActive = currentDomain === c.domain && currentSubtopic === c.subtopic;
+          treeHtml += `
+            <button type="button" class="subtopic-item ${isActive ? 'active' : ''}"
+                 onclick="selectCategory('${c.domain.replace(/'/g, "\\'")}', '${c.subtopic.replace(/'/g, "\\'")}')">
+              <span>${c.subtopic}</span>
+              <span class="count-badge">${c.paper_count}</span>
+            </button>`;
+        });
+        treeHtml += `</div>`;
+      });
+      treeEl.innerHTML = treeHtml;
+
+      const synthTitle = document.getElementById("synthesis-title");
+      const synthBody = document.getElementById("synthesis-body");
+      if (currentSubtopic) {
+        const matchCat = data.categories.find(
+          c => c.domain === currentDomain && c.subtopic === currentSubtopic
+        );
+        if (matchCat) {
+          synthTitle.textContent = `Key Takeaways — ${matchCat.domain} › ${matchCat.subtopic} (${matchCat.paper_count} Papers)`;
+          synthBody.textContent = matchCat.live_synthesis;
+        }
+      } else {
+        synthTitle.textContent = "Key Takeaways Across All Topics";
+        synthBody.textContent = data.telemetry.global_synthesis;
+      }
+
+      const gridEl = document.getElementById("papers-grid");
+      if (data.papers.length === 0) {
+        gridEl.innerHTML = `
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 28px; text-align: center;">
+            <p style="font-size: var(--text-base); color: var(--text-primary); font-weight: 600;">No papers match your current filter</p>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin-top: 6px;">Try clearing the search filter or selecting "Show All" in Topics &amp; Categories.</p>
+            <button class="btn" style="margin-top: 14px;" onclick="clearSearch()">Reset Filter</button>
+          </div>`;
+      } else {
+        gridEl.innerHTML = data.papers.map(p => {
+          const kwChips = p.simple_keywords.split(",").slice(0, 6).map(k => {
+            const trimmed = k.trim();
+            return `<button type="button" class="pill-btn" onclick="setKeyword('${trimmed.replace(/'/g, "\\'")}')">${trimmed}</button>`;
+          }).join("");
+          return `
+            <article class="paper-card">
+              <div class="paper-meta">
+                <span class="cat-tag">${p.domain} &rsaquo; ${p.subtopic}</span>
+                <div class="meta-right">
+                  <span>${p.published}</span>
+                  <button type="button" class="pill-btn" style="padding: 2px 9px; min-height: 24px;" onclick="openPaperIn3D('${p.arxiv_id}')">
+                    View in 3D World
+                  </button>
+                  <a class="arxiv-link" href="https://arxiv.org/abs/${p.arxiv_id}" target="_blank" rel="noopener">
+                    arXiv:${p.arxiv_id} &#8599;
+                  </a>
+                </div>
+              </div>
+
+              <h3 class="paper-title">${p.title}</h3>
+              <div class="paper-authors">${p.authors}</div>
+
+              <div class="tldr-box">
+                <span class="tldr-label">Plain-English Summary</span>
+                ${p.tldr}
+              </div>
+
+              <div class="method-problem-grid">
+                <div class="mp-item">
+                  <div class="mp-label">Core Method</div>
+                  <div class="mp-val">${p.method_tag}</div>
+                </div>
+                <div class="mp-item">
+                  <div class="mp-label">Problem Solved</div>
+                  <div class="mp-val">${p.problem_tag}</div>
+                </div>
+              </div>
+
+              <details class="card-disclosure">
+                <summary>
+                  <span>View Open Limitation &amp; Search Keywords</span>
+                  <span class="disclosure-chevron">&#9662;</span>
+                </summary>
+                <div class="disclosure-body">
+                  <div class="limitation-box">
+                    <strong>Open Limitation:</strong> ${p.open_limitation}
+                  </div>
+                  <div class="pills-row">
+                    <span class="pills-label">Keywords:</span>
+                    ${kwChips}
+                  </div>
+                </div>
+              </details>
+            </article>
+          `;
+        }).join("");
+      }
+
+      const logsEl = document.getElementById("logs-tbody");
+      logsEl.innerHTML = data.logs.map(l => {
+        let badgeStyle = "background: var(--status-verified-bg); color: var(--status-verified); border: 1px solid var(--status-verified-border);";
+        if (l.guard_type.includes("WHITE_SPACE")) {
+          badgeStyle = "background: var(--galaxy-accent-bg); color: #ddd6fe; border: 1px solid var(--galaxy-accent-border);";
+        } else if (l.guard_type.includes("THEME")) {
+          badgeStyle = "background: var(--accent-interactive-bg); color: #7dd3fc; border: 1px solid var(--accent-interactive-border);";
+        }
+        return `
+          <tr>
+            <td style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-muted); white-space: nowrap;">${l.timestamp}</td>
+            <td><span class="log-badge" style="${badgeStyle}">${l.guard_type}</span></td>
+            <td style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-secondary);">${l.query_text}</td>
+            <td style="color: var(--text-primary);">${l.action_taken}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function openPaperIn3D(arxivId) {
+      switchTab("galaxy");
+      selectGalaxyNode(`paper:${arxivId}`, true);
+    }
+
+    async function triggerHarvestStep() {
+      const res = await fetch("/api/harvest", { method: "POST" });
+      const data = await res.json();
+      await fetchState();
+      if (activeTab === "galaxy" && data && data.paper && data.paper.arxiv_id) {
+        selectGalaxyNode(`paper:${data.paper.arxiv_id}`, true);
+      }
+    }
+
+    async function applyResearchTheme() {
+      const inputEl = document.getElementById("theme-input");
+      const theme = inputEl ? inputEl.value.trim() : "";
+      if (!theme) return;
+      await sendThemeUpdate(theme);
+    }
+
+    async function presetTheme(theme) {
+      const inputEl = document.getElementById("theme-input");
+      if (inputEl) {
+        inputEl.value = theme === "all" ? "" : theme;
+      }
+      await sendThemeUpdate(theme);
+    }
+
+    async function sendThemeUpdate(theme) {
+      const res = await fetch("/api/set_theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme })
+      });
+      const data = await res.json();
+      if (theme === "all") {
+        currentDomain = "";
+        currentSubtopic = "";
+        document.getElementById("search-input").value = "";
+      } else if (data.harvested_paper) {
+        currentDomain = data.harvested_paper.domain;
+        currentSubtopic = data.harvested_paper.subtopic;
+      }
+      await fetchState();
+      if (activeTab === "galaxy" && data.harvested_paper) {
+        selectGalaxyNode(`paper:${data.harvested_paper.arxiv_id}`, true);
+      }
+    }
+
+    async function speakText(text) {
+      await fetch("/api/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+    }
+
+    function speakCurrentSynthesis() {
+      const text = document.getElementById("synthesis-body").textContent;
+      speakText(text);
+    }
+
+    function startVoiceSearch() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const btn = document.getElementById("voice-btn");
+      if (!SpeechRec) {
+        const fallback = prompt("Enter a simple keyword or command (e.g., 'fast inference', 'robot hand', '3d world'):");
+        if (fallback) {
+          document.getElementById("search-input").value = fallback;
+          fetchState();
+        }
+        return;
+      }
+      const rec = new SpeechRec();
+      rec.lang = "en-US";
+      rec.interimResults = false;
+      btn.textContent = "Listening...";
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        btn.textContent = "Voice Search";
+        if (transcript.includes("3d") || transcript.includes("world") || transcript.includes("galaxy")) {
+          switchTab("galaxy");
+        } else {
+          document.getElementById("search-input").value = transcript.replace(/search for|find papers on|papers about/g, "").trim();
+          switchTab("explorer");
+          fetchState();
+        }
+      };
+      rec.onerror = () => {
+        btn.textContent = "Voice Search";
+      };
+      rec.start();
+    }
+
+    setupGalaxyInteractions();
+    requestAnimationFrame(renderGalaxyFrame);
+    fetchState();
+    setInterval(fetchState, 3000);
+  </script>
+</body>
+</html>
